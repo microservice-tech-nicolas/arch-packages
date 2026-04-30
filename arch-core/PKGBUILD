@@ -18,6 +18,7 @@ depends=(
   'zsh-syntax-highlighting'
   'ttf-jetbrains-mono-nerd'
   'ttf-inconsolata-nerd'
+  'terminus-font'
 )
 optdepends=(
   'python-pywal: terminal colorscheme from wallpaper'

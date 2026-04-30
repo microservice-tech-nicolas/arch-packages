@@ -6,11 +6,45 @@ post_install() {
   user="$(_real_user)"
   home="$(_real_home)"
 
-  # Set zsh as default shell
+  # ── Fonts ─────────────────────────────────────────────────────────────────
+  echo "==> arch-core: refreshing font cache..."
+  fc-cache -f
+
+  # TTY/vconsole — nerd fonts are TTF and cannot be used as console fonts.
+  # Use ter-v32b (Terminus) for a crisp TTY experience instead.
+  if command -v setfont &>/dev/null && pacman -Q terminus-font &>/dev/null 2>&1; then
+    echo "==> arch-core: setting TTY console font to Terminus ter-v32b..."
+    setfont ter-v32b 2>/dev/null || true
+    # Persist across reboots via vconsole.conf
+    if ! grep -q "^FONT=ter-v32b" /etc/vconsole.conf 2>/dev/null; then
+      sed -i '/^FONT=/d' /etc/vconsole.conf 2>/dev/null || true
+      echo "FONT=ter-v32b" >> /etc/vconsole.conf
+    fi
+  fi
+
+  # Kitty — set Inconsolata Nerd Font if kitty is installed and config exists
+  local kitty_conf="${home}/.config/kitty/kitty.conf"
+  if command -v kitty &>/dev/null && [ -f "${kitty_conf}" ]; then
+    echo "==> arch-core: adding Inconsolata Nerd Font to kitty config..."
+    # Only add if not already present
+    if ! grep -q "Inconsolata" "${kitty_conf}"; then
+      cat >> "${kitty_conf}" <<'EOF'
+
+# Inconsolata Nerd Font (no ligatures) — added by arch-core
+# Uncomment to switch from JetBrainsMono:
+# font_family      family="Inconsolata Nerd Font Mono"
+# bold_font        auto
+# italic_font      auto
+# bold_italic_font auto
+EOF
+    fi
+  fi
+
+  # ── Shell ──────────────────────────────────────────────────────────────────
   echo "==> arch-core: setting zsh as default shell for ${user}..."
   chsh -s /usr/bin/zsh "${user}"
 
-  # Install oh-my-zsh if not already present
+  # ── oh-my-zsh ─────────────────────────────────────────────────────────────
   if [ ! -d "${home}/.oh-my-zsh" ]; then
     echo "==> arch-core: installing oh-my-zsh..."
     sudo -u "${user}" sh -c \
@@ -18,7 +52,7 @@ post_install() {
       "" --unattended --keep-zshrc
   fi
 
-  # Install TPM for tmux if tmux config is present
+  # ── TPM (tmux plugin manager) ─────────────────────────────────────────────
   local tpm_dir="${home}/.config/tmux/plugins/tpm"
   if [ ! -d "${tpm_dir}" ] && [ -f "${home}/.config/tmux/tmux.conf" ]; then
     echo "==> arch-core: installing tmux plugin manager..."
@@ -26,7 +60,10 @@ post_install() {
       https://github.com/tmux-plugins/tpm "${tpm_dir}"
   fi
 
-  echo "==> arch-core: done. Open a new shell — zsh is now your default."
+  echo "==> arch-core: done."
+  echo "    Fonts: fc-cache refreshed, TTY set to Terminus ter-v32b"
+  echo "    Inconsolata Nerd Font available — see ~/.config/kitty/kitty.conf to activate"
+  echo "    Open a new shell — zsh is now your default."
 }
 
 post_upgrade() {

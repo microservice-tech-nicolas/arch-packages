@@ -2,8 +2,7 @@ _real_user() { echo "${SUDO_USER:-$(logname 2>/dev/null || whoami)}"; }
 _real_home() { getent passwd "$(_real_user)" | cut -d: -f6; }
 
 _install_or_update() {
-  local name="$1"
-  local cmd="$2"
+  local name="$1" cmd="$2"
   echo "==> arch-ai: installing/updating ${name}..."
   if eval "${cmd}"; then
     echo "  [ok] ${name}"
@@ -13,20 +12,31 @@ _install_or_update() {
 }
 
 post_install() {
-  _install_or_update "claude-code" "npm install -g @anthropic-ai/claude-code --silent"
+  local user home
+  user="$(_real_user)"
+  home="$(_real_home)"
 
-  # opencode — Go binary, install via their install script
+  # claude-code — official native installer (replaced npm install as of 2025)
+  _install_or_update "claude-code" \
+    "curl -fsSL https://claude.ai/install.sh | bash"
+
+  # opencode — official install script
   _install_or_update "opencode" \
     "curl -fsSL https://opencode.ai/install | bash"
 
-  # crush — Go binary from charmbracelet
+  # crush — charmbracelet's AI coding tool
   _install_or_update "crush" \
     "curl -fsSL https://charm.sh/install | bash -s -- crush"
 
+  echo ""
   echo "==> arch-ai: done."
-  echo "    claude-code: run 'claude' to start"
-  echo "    opencode:    run 'opencode' to start"
-  echo "    crush:       run 'crush' to start"
+  echo "    claude  — run 'claude' to start Claude Code"
+  echo "    opencode — run 'opencode' to start"
+  echo "    crush    — run 'crush' to start"
+  echo ""
+  echo "    Set your API keys (never hardcode in .zshrc):"
+  echo "      pass insert api/anthropic"
+  echo "      pass insert api/openrouter"
 }
 
 post_upgrade() {
