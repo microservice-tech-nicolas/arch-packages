@@ -1,7 +1,7 @@
 # Maintainer: Nicolas <nicolas.verhaert@microservice.tech>
 pkgname=nic-dotfiles
 pkgver=1
-pkgrel=6
+pkgrel=7
 pkgdesc="Nicolas dotfiles — bare git clone into $HOME (includes nvim config)"
 arch=('any')
 url="https://github.com/microservice-tech-nicolas/arch-dotfiles"
