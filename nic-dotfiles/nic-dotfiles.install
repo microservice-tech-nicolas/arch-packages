@@ -1,7 +1,6 @@
 _DOTFILES_REPO="https://github.com/microservice-tech-nicolas/arch-dotfiles.git"
 
 _real_user() {
-  # Prefer SUDO_USER, fall back to logname, then whoami
   echo "${SUDO_USER:-$(logname 2>/dev/null || whoami)}"
 }
 
@@ -9,7 +8,7 @@ _real_home() {
   getent passwd "$(_real_user)" | cut -d: -f6
 }
 
-post_install() {
+_setup_dotfiles() {
   local user home dotfiles_dir dot
 
   user="$(_real_user)"
@@ -19,6 +18,7 @@ post_install() {
 
   echo "==> nic-dotfiles: installing for user '${user}' into ${home}"
 
+  # ── 1. Bare clone ────────────────────────────────────────────────────────
   if [ -d "${dotfiles_dir}" ]; then
     echo "==> Bare repo already exists at ${dotfiles_dir}, skipping clone."
   else
@@ -26,28 +26,48 @@ post_install() {
     sudo -u "${user}" git clone --bare "${_DOTFILES_REPO}" "${dotfiles_dir}"
   fi
 
+  # ── 2. Checkout (back up conflicts) ──────────────────────────────────────
   echo "==> Checking out dotfiles..."
   if ! sudo -u "${user}" ${dot} checkout 2>/dev/null; then
     echo "==> Conflicts found — backing up to ${home}/.dotfiles-backup/"
-    mkdir -p "${home}/.dotfiles-backup"
     sudo -u "${user}" ${dot} checkout 2>&1 \
       | grep "^\s" | awk '{print $1}' \
-      | xargs -I{} bash -c 'mkdir -p "'"${home}"'/.dotfiles-backup/$(dirname "{}")" && mv "'"${home}"'/{}" "'"${home}"'/.dotfiles-backup/{}"'
+      | while read -r f; do
+          mkdir -p "${home}/.dotfiles-backup/$(dirname "${f}")"
+          mv "${home}/${f}" "${home}/.dotfiles-backup/${f}"
+        done
     sudo -u "${user}" ${dot} checkout
   fi
 
   sudo -u "${user}" ${dot} config --local status.showUntrackedFiles no
 
-  # Add dot alias to shell rc files
+  # ── 3. Symlink ~/.config/nvim → bare-checkout location ───────────────────
+  local nvim_src="${home}/.config/nvim"
+  local nvim_bck="${home}/.config/nvim_bck"
+
+  if [ -L "${nvim_src}" ]; then
+    echo "==> ${nvim_src} already a symlink, leaving it."
+  elif [ -d "${nvim_src}" ]; then
+    echo "==> Backing up existing ${nvim_src} to ${nvim_bck}"
+    mv "${nvim_src}" "${nvim_bck}"
+    sudo -u "${user}" ln -s "${home}/.config/nvim" "${nvim_src}" 2>/dev/null || true
+    # The bare checkout already placed .config/nvim — nothing more needed
+  fi
+  # Ensure ownership is correct
+  chown -h "${user}:${user}" "${nvim_src}" 2>/dev/null || true
+
+  # ── 4. dot alias ─────────────────────────────────────────────────────────
   for rc in "${home}/.zshrc" "${home}/.bashrc"; do
     if [ -f "${rc}" ] && ! grep -q "alias dot=" "${rc}"; then
       echo "alias dot='git --git-dir=\$HOME/.dotfiles --work-tree=\$HOME'" >> "${rc}"
-      chown "${user}:${user}" "${rc}"
     fi
   done
 
-  echo "==> Done! Dotfiles checked out into ${home}."
-  echo "    Use 'dot' as your dotfiles git command (open a new shell first)."
+  echo "==> Done! ~/.config/nvim is live. Open nvim — lazy.nvim will bootstrap plugins on first launch."
+}
+
+post_install() {
+  _setup_dotfiles
 }
 
 post_upgrade() {

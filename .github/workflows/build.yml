@@ -42,12 +42,13 @@ jobs:
           chown -R builder:builder "$GITHUB_WORKSPACE"
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      - name: Auto-bump pkgrel based on git history
+      - name: Set pkgrel from PKGBUILD commit count (only changes when PKGBUILD changes)
         working-directory: ${{ github.workspace }}
         run: |
           for pkg in nic-nvim nic-dotfiles; do
-            commit_count=$(git log --oneline -- "${pkg}/" | wc -l)
-            pkgrel=$(( commit_count + 1 ))
+            # Count only commits that actually touched this PKGBUILD file
+            commit_count=$(git log --oneline -- "${pkg}/PKGBUILD" | wc -l)
+            pkgrel=$(( commit_count ))
             sed -i "s/^pkgrel=.*/pkgrel=${pkgrel}/" "${pkg}/PKGBUILD"
             echo "${pkg}: pkgrel=${pkgrel}"
           done
