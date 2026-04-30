@@ -10,55 +10,57 @@ Packages are built automatically via GitHub Actions on an Arch Linux container a
 | `nic-nvim` | Neovim latest stable, built from source |
 | `nic-dotfiles` | Bare git clone of [arch-dotfiles](https://github.com/microservice-tech-nicolas/arch-dotfiles) into `$HOME` |
 
+## Fresh Arch install — one command
+
+```sh
+bash <(curl -fsSL https://raw.githubusercontent.com/microservice-tech-nicolas/arch-packages/main/install.sh)
+```
+
+This will:
+1. Add `[nic-repo]` to `/etc/pacman.conf`
+2. Sync the package database
+3. Install `nic-nvim` and `nic-dotfiles` (which checks out your dotfiles into `$HOME`)
+
 ## Channels
 
 | Channel | Branch | Stability |
 |---|---|---|
-| `stable` | `main` | production — only tagged/reviewed builds |
-| `dev` | `dev` | cutting edge — all pushes |
+| `stable` | `main` | production — built on every push to main |
+| `dev` | `dev` | cutting edge — all pushes to dev branch |
 
-## Add to pacman
+## Manual pacman setup
 
-Edit `/etc/pacman.conf` and add **one** of the following above `[core]`:
+Add to `/etc/pacman.conf` (anywhere above `[core]`):
 
-**Stable (recommended):**
 ```ini
 [nic-repo]
 SigLevel = Optional TrustAll
 Server = https://raw.githubusercontent.com/microservice-tech-nicolas/arch-packages/main/repo/stable/$arch
 ```
 
-**Dev:**
-```ini
-[nic-repo]
-SigLevel = Optional TrustAll
-Server = https://raw.githubusercontent.com/microservice-tech-nicolas/arch-packages/dev/repo/dev/$arch
-```
-
 Then:
+
 ```sh
 sudo pacman -Sy
 sudo pacman -S nic-nvim nic-dotfiles
 ```
 
-## Install script (fresh Arch box)
+## Managing dotfiles
+
+After install, use `dot` like git from anywhere in `$HOME`:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/microservice-tech-nicolas/arch-packages/main/install.sh | bash
-```
-
-## Managing dotfiles after install
-
-```sh
+dot status
 dot add .config/nvim/init.lua
 dot commit -m "nvim: initial config"
 dot push
 ```
 
-## Local build
+## How builds work
 
-```sh
-git clone https://github.com/microservice-tech-nicolas/arch-packages.git
-cd arch-packages/nic-nvim && makepkg -si
-cd ../nic-dotfiles && makepkg -si
-```
+- Any push to `nic-*/PKGBUILD` on `main` or `dev` triggers a GitHub Actions build
+- Built on an official `archlinux` container using `makepkg`
+- Neovim version is fetched automatically from the GitHub releases API — always latest stable
+- `pkgrel` is auto-incremented based on commit history
+- Only published to the pacman repo on a fully successful build
+- `main` → `repo/stable/x86_64/` | `dev` → `repo/dev/x86_64/`
