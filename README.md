@@ -19,7 +19,13 @@ bash <(curl -fsSL https://raw.githubusercontent.com/microservice-tech-nicolas/ar
 This will:
 1. Add `[nic-repo]` to `/etc/pacman.conf`
 2. Sync the package database
-3. Install `nic-nvim` and `nic-dotfiles` (which checks out your dotfiles into `$HOME`)
+
+Then install whatever you need via pacman:
+
+```sh
+sudo pacman -S nic-nvim
+sudo pacman -S nic-dotfiles
+```
 
 ## Channels
 
