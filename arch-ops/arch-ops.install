@@ -1,0 +1,16 @@
+_real_user() { echo "${SUDO_USER:-$(logname 2>/dev/null || whoami)}"; }
+
+post_install() {
+  local user
+  user="$(_real_user)"
+
+  echo "==> arch-ops: enabling Docker service..."
+  systemctl enable docker.service
+  usermod -aG docker "${user}"
+
+  echo "==> arch-ops: done. Log out and back in for docker group to take effect."
+}
+
+post_upgrade() {
+  post_install
+}

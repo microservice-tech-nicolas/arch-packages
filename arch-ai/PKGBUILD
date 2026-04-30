@@ -1,23 +1,15 @@
 # Maintainer: Nicolas <nicolas.verhaert@microservice.tech>
-pkgname=arch-ops
+pkgname=arch-ai
 pkgver=1
 pkgrel=1
-pkgdesc="Ops tooling: kubectl, helm, k9s, minikube, docker"
+pkgdesc="AI coding tools: claude-code, opencode, crush"
 arch=('x86_64')
 url="https://github.com/microservice-tech-nicolas/arch-packages"
 license=('MIT')
 depends=(
-  'kubectl'
-  'helm'
-  'k9s'
-  'minikube'
-  'docker'
-  'docker-compose'
-  'docker-buildx'
-)
-optdepends=(
-  'k3s: lightweight Kubernetes (AUR)'
-  'lazydocker: docker TUI (AUR)'
+  'nodejs'
+  'npm'
+  'curl'
 )
 install=${pkgname}.install
 source=()

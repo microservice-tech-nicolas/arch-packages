@@ -49,6 +49,9 @@ depends=(
   # portal
   'xdg-desktop-portal-wlr'
   'xdg-desktop-portal'
+  # browsers
+  'firefox'
+  'qutebrowser'
 )
 optdepends=(
   'wlogout: logout menu (AUR)'

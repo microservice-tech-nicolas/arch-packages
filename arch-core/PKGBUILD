@@ -17,6 +17,7 @@ depends=(
   'zsh-autosuggestions'
   'zsh-syntax-highlighting'
   'ttf-jetbrains-mono-nerd'
+  'ttf-inconsolata-nerd'
 )
 optdepends=(
   'python-pywal: terminal colorscheme from wallpaper'

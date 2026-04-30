@@ -13,6 +13,7 @@ depends=(
   'arch-pass'
   'arch-gui-sway'
   'arch-ops'
+  'arch-ai'
   'nic-dotfiles'
 )
 source=()
