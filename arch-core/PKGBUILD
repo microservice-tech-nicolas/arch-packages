@@ -14,14 +14,12 @@ depends=(
   'zoxide'
   'eza'
   'lsd'
-  'oh-my-zsh-git'        # AUR — zsh framework
   'zsh-autosuggestions'
   'zsh-syntax-highlighting'
-  'ttf-jetbrains-mono-nerd'  # kitty font
-  'nerd-fonts-jetbrains-mono' # fallback name
+  'ttf-jetbrains-mono-nerd'
 )
 optdepends=(
-  'pywal: terminal colorscheme from wallpaper'
+  'python-pywal: terminal colorscheme from wallpaper'
 )
 install=${pkgname}.install
 source=()

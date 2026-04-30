@@ -137,8 +137,8 @@ jobs:
       options: --privileged
 
     steps:
-      - name: Install repo-add
-        run: pacman -Sy --noconfirm --needed pacman
+      - name: Install repo-add and git
+        run: pacman -Sy --noconfirm --needed pacman git
 
       - uses: actions/checkout@v4
         with:
