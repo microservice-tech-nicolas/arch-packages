@@ -203,8 +203,22 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
 
-          # Pull latest first to avoid rebase conflicts on binary pkg files
-          git pull --rebase origin ${{ github.ref_name }}
+          # Reset to remote HEAD (parallel builds may have pushed), then overlay our built files
+          git fetch origin ${{ github.ref_name }}
+          git reset --hard origin/${{ github.ref_name }}
+
+          # Re-copy built packages (lost by reset) and rebuild db
+          arch="x86_64"
+          dest="repo/${REPO_CHANNEL}/${arch}"
+          cp /tmp/built-pkgs/*.pkg.tar.zst "${dest}/" 2>/dev/null || true
+          for f in /tmp/built-pkgs/*.pkg.tar.zst; do
+            pkgbase=$(basename "$f" | sed 's/-[0-9][^-]*-[0-9][^-]*-[^-]*\.pkg\.tar\.zst//')
+            find "${dest}" -name "${pkgbase}-*.pkg.tar.zst" ! -name "$(basename $f)" -delete 2>/dev/null || true
+          done
+          repo-add "${dest}/nic-repo.db.tar.gz" "${dest}"/*.pkg.tar.zst
+          rm -f "${dest}/nic-repo.db" "${dest}/nic-repo.files" "${dest}"/*.old
+          cp "${dest}/nic-repo.db.tar.gz" "${dest}/nic-repo.db"
+          cp "${dest}/nic-repo.files.tar.gz" "${dest}/nic-repo.files" 2>/dev/null || true
 
           git add repo/ */PKGBUILD
           if git diff --cached --quiet; then
