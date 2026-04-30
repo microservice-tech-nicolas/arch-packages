@@ -78,12 +78,15 @@ jobs:
           dest="repo/${REPO_CHANNEL}/${arch}"
           mkdir -p "${dest}"
 
+          # Clear old packages so only the freshly built versions remain
+          rm -f "${dest}"/*.pkg.tar.zst "${dest}"/*.pkg.tar.zst.sig
           for pkg in nic-nvim nic-dotfiles; do
             cp ${pkg}/*.pkg.tar.zst "${dest}/"
           done
 
           repo-add "${dest}/nic-repo.db.tar.gz" "${dest}"/*.pkg.tar.zst
-          # Copy instead of symlink — raw GitHub URLs can't resolve symlinks
+          # repo-add creates hard links; remove them and copy so raw GitHub serves real files
+          rm -f "${dest}/nic-repo.db" "${dest}/nic-repo.files"
           cp "${dest}/nic-repo.db.tar.gz" "${dest}/nic-repo.db"
           cp "${dest}/nic-repo.files.tar.gz" "${dest}/nic-repo.files" 2>/dev/null || true
 
