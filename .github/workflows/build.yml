@@ -83,8 +83,9 @@ jobs:
           done
 
           repo-add "${dest}/nic-repo.db.tar.gz" "${dest}"/*.pkg.tar.zst
-          ln -sf nic-repo.db.tar.gz "${dest}/nic-repo.db"
-          ln -sf nic-repo.files.tar.gz "${dest}/nic-repo.files" 2>/dev/null || true
+          # Copy instead of symlink — raw GitHub URLs can't resolve symlinks
+          cp "${dest}/nic-repo.db.tar.gz" "${dest}/nic-repo.db"
+          cp "${dest}/nic-repo.files.tar.gz" "${dest}/nic-repo.files" 2>/dev/null || true
 
           echo "=== Repo contents ==="
           ls -lh "${dest}/"
