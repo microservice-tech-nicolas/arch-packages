@@ -26,44 +26,30 @@ _setup_dotfiles() {
     sudo -u "${user}" git clone --bare "${_DOTFILES_REPO}" "${dotfiles_dir}"
   fi
 
-  # ── 2. Checkout (back up conflicts) ──────────────────────────────────────
+  # ── 2. Back up any conflicting files/dirs, then checkout ─────────────────
   echo "==> Checking out dotfiles..."
-  if ! sudo -u "${user}" ${dot} checkout 2>/dev/null; then
+  local conflicts
+  conflicts=$(sudo -u "${user}" ${dot} checkout 2>&1 | grep "^\s" | awk '{print $1}')
+  if [ -n "${conflicts}" ]; then
     echo "==> Conflicts found — backing up to ${home}/.dotfiles-backup/"
-    sudo -u "${user}" ${dot} checkout 2>&1 \
-      | grep "^\s" | awk '{print $1}' \
-      | while read -r f; do
-          mkdir -p "${home}/.dotfiles-backup/$(dirname "${f}")"
-          mv "${home}/${f}" "${home}/.dotfiles-backup/${f}"
-        done
+    echo "${conflicts}" | while read -r f; do
+      mkdir -p "${home}/.dotfiles-backup/$(dirname "${f}")"
+      mv "${home}/${f}" "${home}/.dotfiles-backup/${f}"
+    done
     sudo -u "${user}" ${dot} checkout
   fi
 
   sudo -u "${user}" ${dot} config --local status.showUntrackedFiles no
 
-  # ── 3. Symlink ~/.config/nvim → bare-checkout location ───────────────────
-  local nvim_src="${home}/.config/nvim"
-  local nvim_bck="${home}/.config/nvim_bck"
-
-  if [ -L "${nvim_src}" ]; then
-    echo "==> ${nvim_src} already a symlink, leaving it."
-  elif [ -d "${nvim_src}" ]; then
-    echo "==> Backing up existing ${nvim_src} to ${nvim_bck}"
-    mv "${nvim_src}" "${nvim_bck}"
-    sudo -u "${user}" ln -s "${home}/.config/nvim" "${nvim_src}" 2>/dev/null || true
-    # The bare checkout already placed .config/nvim — nothing more needed
-  fi
-  # Ensure ownership is correct
-  chown -h "${user}:${user}" "${nvim_src}" 2>/dev/null || true
-
-  # ── 4. dot alias ─────────────────────────────────────────────────────────
+  # ── 3. dot alias ─────────────────────────────────────────────────────────
   for rc in "${home}/.zshrc" "${home}/.bashrc"; do
     if [ -f "${rc}" ] && ! grep -q "alias dot=" "${rc}"; then
       echo "alias dot='git --git-dir=\$HOME/.dotfiles --work-tree=\$HOME'" >> "${rc}"
     fi
   done
 
-  echo "==> Done! ~/.config/nvim is live. Open nvim — lazy.nvim will bootstrap plugins on first launch."
+  echo "==> Done! Dotfiles checked out into ${home}."
+  echo "    Run 'nvim' — lazy.nvim will bootstrap plugins on first launch."
 }
 
 post_install() {
