@@ -1,0 +1,35 @@
+# Maintainer: Nicolas <nicolas.verhaert@microservice.tech>
+pkgname=arch-eyecandy
+pkgver=1
+pkgrel=1
+pkgdesc="Rice essentials: pywal, swww, starship, fzfmenu wallpaper picker"
+arch=('x86_64')
+url="https://github.com/microservice-tech-nicolas/arch-packages"
+license=('MIT')
+depends=(
+  # pywal — generates colorschemes from wallpaper
+  'python-pywal'
+  # swww — animated Wayland wallpaper daemon (sets actual wallpaper)
+  'swww'
+  # starship — cross-shell prompt
+  'starship'
+  # fzf — used by wallpick/fzfmenu scripts
+  'fzf'
+  # image preview in fzfmenu wallpick (kitty icat)
+  'kitty'
+  # perl — used by wal-apply for CSS injection into waybar style.css
+  'perl'
+  # notifications
+  'libnotify'
+)
+optdepends=(
+  'python-pywal16: pywal fork with 16-color support (AUR)'
+  'wallust: wallpaper color extractor alternative (AUR)'
+)
+install=${pkgname}.install
+source=()
+sha256sums=()
+
+package() {
+  true
+}

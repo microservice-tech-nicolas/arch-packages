@@ -14,6 +14,7 @@ depends=(
   'arch-gui-sway'
   'arch-ops'
   'arch-ai'
+  'arch-eyecandy'
   'nic-dotfiles'
 )
 source=()

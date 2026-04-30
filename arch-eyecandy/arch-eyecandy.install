@@ -1,0 +1,55 @@
+_real_user() { echo "${SUDO_USER:-$(logname 2>/dev/null || whoami)}"; }
+_real_home() { getent passwd "$(_real_user)" | cut -d: -f6; }
+
+post_install() {
+  local user home
+  user="$(_real_user)"
+  home="$(_real_home)"
+
+  # ── starship shell integration ────────────────────────────────────────────
+  echo "==> arch-eyecandy: wiring starship into shell configs..."
+  for rc in "${home}/.zshrc" "${home}/.bashrc"; do
+    if [ -f "${rc}" ] && ! grep -q "starship init" "${rc}"; then
+      echo '' >> "${rc}"
+      echo '# Starship prompt' >> "${rc}"
+      echo 'eval "$(starship init '"$(basename "${rc}" | sed 's/\.//;s/rc//')"')"' >> "${rc}"
+    fi
+  done
+
+  # ── wallpaper directory ───────────────────────────────────────────────────
+  local walldir="${home}/Pictures/wallpapers"
+  if [ ! -d "${walldir}" ]; then
+    echo "==> arch-eyecandy: creating wallpaper directory at ${walldir}..."
+    sudo -u "${user}" mkdir -p "${walldir}"
+  fi
+
+  # ── fzfmenu scripts — ensure executable ──────────────────────────────────
+  local fzfdir="${home}/.config/fzfmenu"
+  if [ -d "${fzfdir}" ]; then
+    echo "==> arch-eyecandy: setting fzfmenu scripts executable..."
+    chmod +x "${fzfdir}"/* 2>/dev/null || true
+    chown -R "${user}:${user}" "${fzfdir}"
+  fi
+
+  # ── wal-apply integration: wire starship palette reload into wal-apply ───
+  local wal_apply="${fzfdir}/wal-apply"
+  if [ -f "${wal_apply}" ] && ! grep -q "starship" "${wal_apply}"; then
+    echo "" >> "${wal_apply}"
+    echo "# Reload starship config so prompt colors pick up new wal palette" >> "${wal_apply}"
+    echo 'touch "${STARSHIP_CONFIG:-$HOME/.config/starship.toml}" 2>/dev/null || true' >> "${wal_apply}"
+  fi
+
+  echo "==> arch-eyecandy: done."
+  echo ""
+  echo "  Wallpaper workflow:"
+  echo "    Mod+b            — fuzzy wallpaper picker (fzfmenu wallpick)"
+  echo "    wal-apply <img>  — apply wallpaper + generate full theme"
+  echo "    wal-restore      — restore last theme on login (already in sway config)"
+  echo ""
+  echo "  starship: active in new shells. Edit ~/.config/starship.toml to customize."
+  echo "  Wallpapers: drop images into ~/Pictures/wallpapers/"
+}
+
+post_upgrade() {
+  post_install
+}
