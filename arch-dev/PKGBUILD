@@ -9,10 +9,12 @@ license=('MIT')
 depends=(
   'tmux'
   'lazygit'
-  'lazydocker'
-  'sesh'
   'fzf'
   'zoxide'
+)
+optdepends=(
+  'sesh: tmux session manager (AUR)'
+  'lazydocker: docker TUI (AUR)'
 )
 install=${pkgname}.install
 source=()

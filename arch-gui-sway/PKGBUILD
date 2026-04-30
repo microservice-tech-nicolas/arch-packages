@@ -24,8 +24,6 @@ depends=(
   'slurp'
   # wallpaper / theming
   'python-pywal'
-  # logout
-  'wlogout'
   # display config
   'nwg-displays'
   # media / audio
@@ -37,8 +35,6 @@ depends=(
   # clipboard
   'wl-clipboard'
   'cliphist'
-  # idle inhibit
-  'wayland-pipewire-idle-inhibit'
   # fonts & icons
   'ttf-jetbrains-mono-nerd'
   'noto-fonts'
@@ -47,6 +43,11 @@ depends=(
   # portal
   'xdg-desktop-portal-wlr'
   'xdg-desktop-portal'
+)
+optdepends=(
+  'wlogout: logout menu (AUR)'
+  'wayland-pipewire-idle-inhibit: inhibit idle during audio (AUR)'
+  'nwg-displays: display configuration GUI (AUR)'
 )
 install=${pkgname}.install
 source=()
