@@ -6,9 +6,22 @@ pkgdesc="Neovim — latest stable, built from source"
 arch=('x86_64')
 url="https://github.com/neovim/neovim"
 license=('Apache-2.0' 'custom:Vim')
-# Bundled build — only true runtime deps that ship in Arch repos
-depends=('gcc-libs' 'glibc')
-makedepends=('cmake' 'ninja' 'git' 'unzip' 'curl' 'gettext')
+# Runtime deps: neovim binary + everything checkhealth requires
+depends=(
+  # neovim binary
+  'gcc-libs' 'glibc'
+  # LazyVim hard requirements
+  'git' 'ripgrep' 'fd' 'fzf' 'lazygit' 'curl'
+  # tree-sitter CLI (nvim-treesitter grammar compilation)
+  'tree-sitter'
+  # providers
+  'python-pynvim'        # Python provider
+  'nodejs'               # Node.js provider base
+  # clipboard & system open
+  'wl-clipboard'         # Wayland clipboard (wl-copy)
+  'xdg-utils'            # vim.ui.open via xdg-open
+)
+makedepends=('cmake' 'ninja' 'unzip' 'gettext')
 provides=('neovim')
 conflicts=('neovim' 'neovim-git')
 source=("neovim-${pkgver}.tar.gz::https://github.com/neovim/neovim/archive/refs/tags/v${pkgver}.tar.gz")
