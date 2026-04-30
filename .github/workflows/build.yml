@@ -85,8 +85,9 @@ jobs:
           done
 
           repo-add "${dest}/nic-repo.db.tar.gz" "${dest}"/*.pkg.tar.zst
-          # repo-add creates hard links; remove them and copy so raw GitHub serves real files
+          # repo-add creates hard links and .old files; remove all and copy real files
           rm -f "${dest}/nic-repo.db" "${dest}/nic-repo.files"
+          rm -f "${dest}"/*.old
           cp "${dest}/nic-repo.db.tar.gz" "${dest}/nic-repo.db"
           cp "${dest}/nic-repo.files.tar.gz" "${dest}/nic-repo.files" 2>/dev/null || true
 
