@@ -1,0 +1,23 @@
+post_install() {
+  post_upgrade
+}
+
+post_upgrade() {
+  echo "==> nic-nvim: installing Node.js provider..."
+  if command -v npm &>/dev/null; then
+    npm install -g neovim --silent && echo "  [ok] neovim npm package installed" \
+      || echo "  [warn] npm install neovim failed — run 'sudo npm install -g neovim' manually"
+  else
+    echo "  [warn] npm not found, skipping Node.js provider"
+  fi
+
+  echo "==> nic-nvim: installing Perl provider..."
+  if command -v cpanm &>/dev/null; then
+    cpanm --notest --quiet Neovim::Ext && echo "  [ok] Neovim::Ext installed" \
+      || echo "  [warn] cpanm Neovim::Ext failed — run 'cpanm Neovim::Ext' manually"
+  else
+    echo "  [warn] cpanm not found, skipping Perl provider"
+  fi
+
+  echo "==> nic-nvim: all providers set up. Run 'nvim +checkhealth' to verify."
+}

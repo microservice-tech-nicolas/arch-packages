@@ -16,12 +16,14 @@ depends=(
   'tree-sitter'
   # providers
   'python-pynvim'        # Python provider
-  'nodejs'               # Node.js provider base
+  'nodejs' 'npm'         # Node.js provider (npm used in post_install to install neovim pkg)
+  'perl' 'perl-app-cpanminus'  # Perl provider (cpanm used in post_install for Neovim::Ext)
   # clipboard & system open
   'wl-clipboard'         # Wayland clipboard (wl-copy)
   'xdg-utils'            # vim.ui.open via xdg-open
 )
 makedepends=('cmake' 'ninja' 'unzip' 'gettext')
+install=nic-nvim.install
 provides=('neovim')
 conflicts=('neovim' 'neovim-git')
 source=("neovim-${pkgver}.tar.gz::https://github.com/neovim/neovim/archive/refs/tags/v${pkgver}.tar.gz")
