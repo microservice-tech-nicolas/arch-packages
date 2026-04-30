@@ -1,0 +1,57 @@
+# Maintainer: Nicolas <nicolas.verhaert@microservice.tech>
+pkgname=arch-gui-sway
+pkgver=1
+pkgrel=1
+pkgdesc="Sway Wayland compositor and full GUI stack"
+arch=('any')
+url="https://github.com/microservice-tech-nicolas/arch-packages"
+license=('MIT')
+depends=(
+  # compositor
+  'sway'
+  'swaybg'
+  'swayidle'
+  'swaylock'
+  # bar
+  'waybar'
+  # notifications
+  'swaync'
+  # launcher
+  'rofi-wayland'
+  # screenshot
+  'swappy'
+  'grim'
+  'slurp'
+  # wallpaper / theming
+  'python-pywal'
+  # logout
+  'wlogout'
+  # display config
+  'nwg-displays'
+  # media / audio
+  'pipewire'
+  'pipewire-pulse'
+  'wireplumber'
+  'easyeffects'
+  'playerctl'
+  # clipboard
+  'wl-clipboard'
+  'cliphist'
+  # idle inhibit
+  'wayland-pipewire-idle-inhibit'
+  # fonts & icons
+  'ttf-jetbrains-mono-nerd'
+  'noto-fonts'
+  'noto-fonts-emoji'
+  'papirus-icon-theme'
+  # portal
+  'xdg-desktop-portal-wlr'
+  'xdg-desktop-portal'
+)
+install=${pkgname}.install
+source=()
+sha256sums=()
+
+package() {
+  true
+}

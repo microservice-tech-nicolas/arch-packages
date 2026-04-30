@@ -1,0 +1,23 @@
+# Maintainer: Nicolas <nicolas.verhaert@microservice.tech>
+pkgname=arch-dev
+pkgver=1
+pkgrel=1
+pkgdesc="Developer tooling: tmux, sesh, lazygit, lazydocker"
+arch=('any')
+url="https://github.com/microservice-tech-nicolas/arch-packages"
+license=('MIT')
+depends=(
+  'tmux'
+  'lazygit'
+  'lazydocker'
+  'sesh'
+  'fzf'
+  'zoxide'
+)
+install=${pkgname}.install
+source=()
+sha256sums=()
+
+package() {
+  true
+}

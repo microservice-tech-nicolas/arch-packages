@@ -1,0 +1,18 @@
+_real_user() { echo "${SUDO_USER:-$(logname 2>/dev/null || whoami)}"; }
+_real_home() { getent passwd "$(_real_user)" | cut -d: -f6; }
+
+post_install() {
+  local user home
+  user="$(_real_user)"
+  home="$(_real_home)"
+
+  # Enable pipewire services for the user
+  echo "==> arch-gui-sway: enabling pipewire services..."
+  sudo -u "${user}" systemctl --user enable --now pipewire pipewire-pulse wireplumber 2>/dev/null || true
+
+  echo "==> arch-gui-sway: done. Log out and select Sway from your display manager."
+}
+
+post_upgrade() {
+  post_install
+}

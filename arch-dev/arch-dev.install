@@ -1,0 +1,27 @@
+_real_user() { echo "${SUDO_USER:-$(logname 2>/dev/null || whoami)}"; }
+_real_home() { getent passwd "$(_real_user)" | cut -d: -f6; }
+
+post_install() {
+  local user home tpm_dir
+  user="$(_real_user)"
+  home="$(_real_home)"
+  tpm_dir="${home}/.config/tmux/plugins/tpm"
+
+  # Bootstrap TPM if tmux config is present but TPM not yet installed
+  if [ ! -d "${tpm_dir}" ] && [ -f "${home}/.config/tmux/tmux.conf" ]; then
+    echo "==> arch-dev: installing tmux plugin manager (TPM)..."
+    sudo -u "${user}" git clone --depth=1 \
+      https://github.com/tmux-plugins/tpm "${tpm_dir}"
+  fi
+
+  if [ -d "${tpm_dir}" ]; then
+    echo "==> arch-dev: installing tmux plugins via TPM..."
+    sudo -u "${user}" "${tpm_dir}/bin/install_plugins"
+  fi
+
+  echo "==> arch-dev: done."
+}
+
+post_upgrade() {
+  post_install
+}

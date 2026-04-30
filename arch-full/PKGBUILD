@@ -1,0 +1,23 @@
+# Maintainer: Nicolas <nicolas.verhaert@microservice.tech>
+pkgname=arch-full
+pkgver=1
+pkgrel=1
+pkgdesc="Full Nicolas rice — installs all nic packages in correct order"
+arch=('any')
+url="https://github.com/microservice-tech-nicolas/arch-packages"
+license=('MIT')
+depends=(
+  'arch-core'
+  'nic-nvim'
+  'arch-dev'
+  'arch-pass'
+  'arch-gui-sway'
+  'arch-ops'
+  'nic-dotfiles'
+)
+source=()
+sha256sums=()
+
+package() {
+  true
+}

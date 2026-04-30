@@ -1,0 +1,20 @@
+# Maintainer: Nicolas <nicolas.verhaert@microservice.tech>
+pkgname=arch-pass
+pkgver=1
+pkgrel=1
+pkgdesc="Password management and env tooling: pass, direnv"
+arch=('any')
+url="https://github.com/microservice-tech-nicolas/arch-packages"
+license=('MIT')
+depends=(
+  'pass'
+  'direnv'
+  'gnupg'
+  'git'
+)
+source=()
+sha256sums=()
+
+package() {
+  true
+}

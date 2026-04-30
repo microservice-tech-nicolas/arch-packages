@@ -1,0 +1,32 @@
+# Maintainer: Nicolas <nicolas.verhaert@microservice.tech>
+pkgname=arch-core
+pkgver=1
+pkgrel=1
+pkgdesc="Core shell environment: zsh, kitty, fastfetch, git, zoxide, eza, lsd"
+arch=('any')
+url="https://github.com/microservice-tech-nicolas/arch-packages"
+license=('MIT')
+depends=(
+  'zsh'
+  'git'
+  'kitty'
+  'fastfetch'
+  'zoxide'
+  'eza'
+  'lsd'
+  'oh-my-zsh-git'        # AUR — zsh framework
+  'zsh-autosuggestions'
+  'zsh-syntax-highlighting'
+  'ttf-jetbrains-mono-nerd'  # kitty font
+  'nerd-fonts-jetbrains-mono' # fallback name
+)
+optdepends=(
+  'pywal: terminal colorscheme from wallpaper'
+)
+install=${pkgname}.install
+source=()
+sha256sums=()
+
+package() {
+  true
+}

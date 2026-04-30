@@ -1,0 +1,24 @@
+# Maintainer: Nicolas <nicolas.verhaert@microservice.tech>
+pkgname=arch-ops
+pkgver=1
+pkgrel=1
+pkgdesc="Ops tooling: kubectl, helm, k9s, k3s, minikube"
+arch=('x86_64')
+url="https://github.com/microservice-tech-nicolas/arch-packages"
+license=('MIT')
+depends=(
+  'kubectl'
+  'helm'
+  'k9s'
+  'minikube'
+)
+optdepends=(
+  'k3s: lightweight Kubernetes'
+  'docker: container runtime for minikube'
+)
+source=()
+sha256sums=()
+
+package() {
+  true
+}

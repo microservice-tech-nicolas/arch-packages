@@ -1,0 +1,34 @@
+_real_user() { echo "${SUDO_USER:-$(logname 2>/dev/null || whoami)}"; }
+_real_home() { getent passwd "$(_real_user)" | cut -d: -f6; }
+
+post_install() {
+  local user home
+  user="$(_real_user)"
+  home="$(_real_home)"
+
+  # Set zsh as default shell
+  echo "==> arch-core: setting zsh as default shell for ${user}..."
+  chsh -s /usr/bin/zsh "${user}"
+
+  # Install oh-my-zsh if not already present
+  if [ ! -d "${home}/.oh-my-zsh" ]; then
+    echo "==> arch-core: installing oh-my-zsh..."
+    sudo -u "${user}" sh -c \
+      "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" \
+      "" --unattended --keep-zshrc
+  fi
+
+  # Install TPM for tmux if tmux config is present
+  local tpm_dir="${home}/.config/tmux/plugins/tpm"
+  if [ ! -d "${tpm_dir}" ] && [ -f "${home}/.config/tmux/tmux.conf" ]; then
+    echo "==> arch-core: installing tmux plugin manager..."
+    sudo -u "${user}" git clone --depth=1 \
+      https://github.com/tmux-plugins/tpm "${tpm_dir}"
+  fi
+
+  echo "==> arch-core: done. Open a new shell — zsh is now your default."
+}
+
+post_upgrade() {
+  post_install
+}

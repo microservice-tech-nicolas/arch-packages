@@ -4,73 +4,171 @@ on:
   push:
     branches: [main, dev]
     paths:
-      - 'nic-*/PKGBUILD'
-      - 'nic-*/**.install'
+      - '*/PKGBUILD'
+      - '*/*.install'
       - '.github/workflows/build.yml'
   workflow_dispatch:
 
 permissions:
   contents: write
 
+env:
+  REPO_CHANNEL: ${{ github.ref_name == 'main' && 'stable' || 'dev' }}
+
 jobs:
-  build:
+  # ── Detect which packages changed ────────────────────────────────────────
+  changed:
     runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.detect.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed packages
+        id: detect
+        run: |
+          # On workflow_dispatch or first push, build everything
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            pkgs=$(ls -d */PKGBUILD 2>/dev/null | sed 's|/PKGBUILD||' | jq -R . | jq -sc .)
+          else
+            changed=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only $(git hash-object -t tree /dev/null) HEAD)
+            pkgs=$(echo "$changed" \
+              | grep -E '^[^/]+/(PKGBUILD|.*\.install)$' \
+              | cut -d/ -f1 | sort -u \
+              | grep -v '^\.github$' \
+              | jq -R . | jq -sc .)
+          fi
+          # arch-full is meta-only, no build needed
+          pkgs=$(echo "$pkgs" | jq 'map(select(. != "arch-full"))')
+          echo "packages=${pkgs}" >> $GITHUB_OUTPUT
+          echo "Will build: ${pkgs}"
+
+  # ── Build each changed package in parallel ───────────────────────────────
+  build:
+    needs: changed
+    if: needs.changed.outputs.packages != '[]' && needs.changed.outputs.packages != ''
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJson(needs.changed.outputs.packages) }}
+
     container:
       image: archlinux:latest
       options: --privileged
 
-    env:
-      REPO_CHANNEL: ${{ github.ref_name == 'main' && 'stable' || 'dev' }}
-
     steps:
+      - name: Restore pacman cache
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/pacman/pkg
+          key: pacman-${{ matrix.package }}-${{ github.run_id }}
+          restore-keys: |
+            pacman-${{ matrix.package }}-
+            pacman-
+
       - name: Bootstrap Arch build environment
-        run: pacman -Syu --noconfirm && pacman -S --noconfirm base-devel git sudo cmake ninja unzip curl python
+        run: |
+          # Honour cached packages — only download what's missing
+          pacman -Syu --noconfirm --needed
+          pacman -S --noconfirm --needed base-devel git sudo cmake ninja unzip curl python
 
       - name: Create build user (makepkg refuses root)
         run: |
           useradd -m builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Fix ownership and safe directory for builder
+      - name: Fix ownership and safe directory
         run: |
           chown -R builder:builder "$GITHUB_WORKSPACE"
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      - name: Set pkgrel from PKGBUILD commit count (only changes when PKGBUILD changes)
+      - name: Set pkgrel from PKGBUILD commit count
         working-directory: ${{ github.workspace }}
         run: |
-          for pkg in nic-nvim nic-dotfiles; do
-            # Count only commits that actually touched this PKGBUILD file
-            commit_count=$(git log --oneline -- "${pkg}/PKGBUILD" | wc -l)
-            pkgrel=$(( commit_count ))
-            sed -i "s/^pkgrel=.*/pkgrel=${pkgrel}/" "${pkg}/PKGBUILD"
-            echo "${pkg}: pkgrel=${pkgrel}"
-          done
+          pkg="${{ matrix.package }}"
+          commit_count=$(git log --oneline -- "${pkg}/PKGBUILD" | wc -l)
+          sed -i "s/^pkgrel=.*/pkgrel=${commit_count}/" "${pkg}/PKGBUILD"
+          echo "${pkg}: pkgrel=${commit_count}"
 
-      - name: Fetch latest Neovim stable version
+      - name: Fetch latest Neovim version (nic-nvim only)
+        if: matrix.package == 'nic-nvim'
         working-directory: ${{ github.workspace }}
         run: |
           latest=$(curl -s https://api.github.com/repos/neovim/neovim/releases/latest \
             | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'].lstrip('v'))")
-          echo "NVIM_VER=${latest}" >> $GITHUB_ENV
           sed -i "s/^pkgver=.*/pkgver=${latest}/" nic-nvim/PKGBUILD
           echo "nic-nvim: pkgver=${latest}"
 
-      - name: Build nic-nvim
+      - name: Build ${{ matrix.package }}
         working-directory: ${{ github.workspace }}
-        run: sudo -u builder bash -c "cd '$GITHUB_WORKSPACE/nic-nvim' && makepkg -s --noconfirm --noprogressbar"
+        run: |
+          sudo -u builder bash -c "cd '$GITHUB_WORKSPACE/${{ matrix.package }}' && makepkg -s --noconfirm --noprogressbar"
         timeout-minutes: 30
 
-      - name: Build nic-dotfiles
+      - name: Upload built package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-${{ matrix.package }}
+          path: ${{ matrix.package }}/*.pkg.tar.zst
+          retention-days: 1
+
+      - name: Upload updated PKGBUILD artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkgbuild-${{ matrix.package }}
+          path: ${{ matrix.package }}/PKGBUILD
+          retention-days: 1
+
+  # ── Assemble all built packages into the repo database ───────────────────
+  publish:
+    needs: [changed, build]
+    if: always() && needs.build.result != 'skipped'
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+
+    steps:
+      - name: Install repo-add
+        run: pacman -Sy --noconfirm --needed pacman
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fix safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Download all built packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pkg-*
+          path: /tmp/built-pkgs
+          merge-multiple: true
+
+      - name: Download updated PKGBUILDs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pkgbuild-*
+          path: /tmp/built-pkgbuilds
+
+      - name: Apply updated PKGBUILDs
         working-directory: ${{ github.workspace }}
-        run: sudo -u builder bash -c "cd '$GITHUB_WORKSPACE/nic-dotfiles' && makepkg -s --noconfirm --noprogressbar"
-        timeout-minutes: 5
+        run: |
+          for dir in /tmp/built-pkgbuilds/pkgbuild-*/; do
+            pkg=$(basename "${dir}" | sed 's/^pkgbuild-//')
+            cp "${dir}/PKGBUILD" "${pkg}/PKGBUILD"
+            echo "Updated PKGBUILD for ${pkg}"
+          done
 
       - name: Assemble repo database
         working-directory: ${{ github.workspace }}
@@ -79,34 +177,36 @@ jobs:
           dest="repo/${REPO_CHANNEL}/${arch}"
           mkdir -p "${dest}"
 
-          # Clear old packages so only the freshly built versions remain
-          rm -f "${dest}"/*.pkg.tar.zst "${dest}"/*.pkg.tar.zst.sig
-          for pkg in nic-nvim nic-dotfiles; do
-            cp ${pkg}/*.pkg.tar.zst "${dest}/"
+          # Copy existing packages (keep ones we didn't rebuild)
+          # Then overlay with freshly built ones
+          cp /tmp/built-pkgs/*.pkg.tar.zst "${dest}/" 2>/dev/null || true
+
+          # Remove old versions of rebuilt packages (keep only latest)
+          for f in /tmp/built-pkgs/*.pkg.tar.zst; do
+            pkgbase=$(basename "$f" | sed 's/-[0-9][^-]*-[0-9][^-]*-[^-]*\.pkg\.tar\.zst//')
+            # Remove older versions of same package
+            find "${dest}" -name "${pkgbase}-*.pkg.tar.zst" ! -name "$(basename $f)" -delete 2>/dev/null || true
           done
 
           repo-add "${dest}/nic-repo.db.tar.gz" "${dest}"/*.pkg.tar.zst
-          # repo-add creates hard links and .old files; remove all and copy real files
-          rm -f "${dest}/nic-repo.db" "${dest}/nic-repo.files"
-          rm -f "${dest}"/*.old
+          rm -f "${dest}/nic-repo.db" "${dest}/nic-repo.files" "${dest}"/*.old
           cp "${dest}/nic-repo.db.tar.gz" "${dest}/nic-repo.db"
           cp "${dest}/nic-repo.files.tar.gz" "${dest}/nic-repo.files" 2>/dev/null || true
 
           echo "=== Repo contents ==="
           ls -lh "${dest}/"
 
-      - name: Commit & push repo artifacts
+      - name: Commit & push
         working-directory: ${{ github.workspace }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
 
-          git add repo/ nic-nvim/PKGBUILD nic-dotfiles/PKGBUILD
-
+          git add repo/ */PKGBUILD
           if git diff --cached --quiet; then
-            echo "Nothing changed, skipping commit."
+            echo "Nothing changed."
           else
-            git commit -m "ci: publish ${REPO_CHANNEL} repo [skip ci]"
+            git commit -m "ci: publish ${REPO_CHANNEL} [${{ needs.changed.outputs.packages }}] [skip ci]"
             git push origin ${{ github.ref_name }}
           fi
