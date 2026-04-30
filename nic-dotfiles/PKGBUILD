@@ -1,0 +1,17 @@
+# Maintainer: Nicolas <nicolas.verhaert@microservice.tech>
+pkgname=nic-dotfiles
+pkgver=1
+pkgrel=1
+pkgdesc="Nicolas dotfiles — bare git clone into \$HOME"
+arch=('any')
+url="https://github.com/microservice-tech-nicolas/arch-dotfiles"
+license=('MIT')
+depends=('git')
+install=${pkgname}.install
+source=()
+sha256sums=()
+
+package() {
+  # All work happens via the .install hook at post_install time
+  true
+}

@@ -1,0 +1,37 @@
+_DOTFILES_REPO="https://github.com/microservice-tech-nicolas/arch-dotfiles.git"
+_DOTFILES_DIR="${HOME}/.dotfiles"
+_DOT="git --git-dir=${_DOTFILES_DIR} --work-tree=${HOME}"
+
+post_install() {
+  if [ -d "${_DOTFILES_DIR}" ]; then
+    echo "==> arch-dotfiles: bare repo already exists at ${_DOTFILES_DIR}, skipping clone"
+  else
+    echo "==> arch-dotfiles: cloning bare repo..."
+    git clone --bare "${_DOTFILES_REPO}" "${_DOTFILES_DIR}"
+  fi
+
+  echo "==> arch-dotfiles: checking out files..."
+  ${_DOT} checkout 2>/dev/null || {
+    echo "==> Backing up conflicting files to ~/.dotfiles-backup/"
+    mkdir -p "${HOME}/.dotfiles-backup"
+    ${_DOT} checkout 2>&1 | grep "^\s" | awk '{print $1}' | \
+      xargs -I{} mv "${HOME}/{}" "${HOME}/.dotfiles-backup/{}"
+    ${_DOT} checkout
+  }
+
+  ${_DOT} config --local status.showUntrackedFiles no
+
+  # Persist the dot alias for zsh and bash
+  for rc in "${HOME}/.zshrc" "${HOME}/.bashrc"; do
+    if [ -f "${rc}" ] && ! grep -q "alias dot=" "${rc}"; then
+      echo "alias dot='git --git-dir=\$HOME/.dotfiles --work-tree=\$HOME'" >> "${rc}"
+    fi
+  done
+
+  echo "==> arch-dotfiles: done. Use 'dot' as your dotfiles git command."
+}
+
+post_upgrade() {
+  echo "==> arch-dotfiles: pulling latest..."
+  git --git-dir="${_DOTFILES_DIR}" --work-tree="${HOME}" pull origin main
+}
