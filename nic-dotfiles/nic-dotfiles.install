@@ -1,37 +1,62 @@
 _DOTFILES_REPO="https://github.com/microservice-tech-nicolas/arch-dotfiles.git"
-_DOTFILES_DIR="${HOME}/.dotfiles"
-_DOT="git --git-dir=${_DOTFILES_DIR} --work-tree=${HOME}"
+
+_real_user() {
+  # Prefer SUDO_USER, fall back to logname, then whoami
+  echo "${SUDO_USER:-$(logname 2>/dev/null || whoami)}"
+}
+
+_real_home() {
+  getent passwd "$(_real_user)" | cut -d: -f6
+}
 
 post_install() {
-  if [ -d "${_DOTFILES_DIR}" ]; then
-    echo "==> arch-dotfiles: bare repo already exists at ${_DOTFILES_DIR}, skipping clone"
+  local user home dotfiles_dir dot
+
+  user="$(_real_user)"
+  home="$(_real_home)"
+  dotfiles_dir="${home}/.dotfiles"
+  dot="git --git-dir=${dotfiles_dir} --work-tree=${home}"
+
+  echo "==> nic-dotfiles: installing for user '${user}' into ${home}"
+
+  if [ -d "${dotfiles_dir}" ]; then
+    echo "==> Bare repo already exists at ${dotfiles_dir}, skipping clone."
   else
-    echo "==> arch-dotfiles: cloning bare repo..."
-    git clone --bare "${_DOTFILES_REPO}" "${_DOTFILES_DIR}"
+    echo "==> Cloning bare repo..."
+    sudo -u "${user}" git clone --bare "${_DOTFILES_REPO}" "${dotfiles_dir}"
   fi
 
-  echo "==> arch-dotfiles: checking out files..."
-  ${_DOT} checkout 2>/dev/null || {
-    echo "==> Backing up conflicting files to ~/.dotfiles-backup/"
-    mkdir -p "${HOME}/.dotfiles-backup"
-    ${_DOT} checkout 2>&1 | grep "^\s" | awk '{print $1}' | \
-      xargs -I{} mv "${HOME}/{}" "${HOME}/.dotfiles-backup/{}"
-    ${_DOT} checkout
-  }
+  echo "==> Checking out dotfiles..."
+  if ! sudo -u "${user}" ${dot} checkout 2>/dev/null; then
+    echo "==> Conflicts found — backing up to ${home}/.dotfiles-backup/"
+    mkdir -p "${home}/.dotfiles-backup"
+    sudo -u "${user}" ${dot} checkout 2>&1 \
+      | grep "^\s" | awk '{print $1}' \
+      | xargs -I{} bash -c 'mkdir -p "'"${home}"'/.dotfiles-backup/$(dirname "{}")" && mv "'"${home}"'/{}" "'"${home}"'/.dotfiles-backup/{}"'
+    sudo -u "${user}" ${dot} checkout
+  fi
 
-  ${_DOT} config --local status.showUntrackedFiles no
+  sudo -u "${user}" ${dot} config --local status.showUntrackedFiles no
 
-  # Persist the dot alias for zsh and bash
-  for rc in "${HOME}/.zshrc" "${HOME}/.bashrc"; do
+  # Add dot alias to shell rc files
+  for rc in "${home}/.zshrc" "${home}/.bashrc"; do
     if [ -f "${rc}" ] && ! grep -q "alias dot=" "${rc}"; then
       echo "alias dot='git --git-dir=\$HOME/.dotfiles --work-tree=\$HOME'" >> "${rc}"
+      chown "${user}:${user}" "${rc}"
     fi
   done
 
-  echo "==> arch-dotfiles: done. Use 'dot' as your dotfiles git command."
+  echo "==> Done! Dotfiles checked out into ${home}."
+  echo "    Use 'dot' as your dotfiles git command (open a new shell first)."
 }
 
 post_upgrade() {
-  echo "==> arch-dotfiles: pulling latest..."
-  git --git-dir="${_DOTFILES_DIR}" --work-tree="${HOME}" pull origin main
+  local user home dotfiles_dir
+
+  user="$(_real_user)"
+  home="$(_real_home)"
+  dotfiles_dir="${home}/.dotfiles"
+
+  echo "==> nic-dotfiles: pulling latest for user '${user}'..."
+  sudo -u "${user}" git --git-dir="${dotfiles_dir}" --work-tree="${home}" pull origin main
 }
