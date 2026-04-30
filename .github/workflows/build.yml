@@ -40,8 +40,8 @@ jobs:
               | grep -v '^\.github$' \
               | jq -R . | jq -sc .)
           fi
-          # arch-full is meta-only, no build needed
-          pkgs=$(echo "$pkgs" | jq 'map(select(. != "arch-full"))')
+          # arch-full is meta-only, no build needed; compact single-line JSON required for GHA
+          pkgs=$(echo "$pkgs" | jq -c 'map(select(. != "arch-full"))')
           echo "packages=${pkgs}" >> $GITHUB_OUTPUT
           echo "Will build: ${pkgs}"
 
