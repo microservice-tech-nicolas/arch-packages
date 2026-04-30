@@ -22,19 +22,11 @@ jobs:
     env:
       REPO_CHANNEL: ${{ github.ref_name == 'main' && 'stable' || 'dev' }}
 
-    defaults:
-      run:
-        working-directory: /github/workspace
-
     steps:
       - name: Bootstrap Arch build environment
-        working-directory: /
-        run: |
-          pacman -Syu --noconfirm
-          pacman -S --noconfirm base-devel git sudo cmake ninja unzip curl python
+        run: pacman -Syu --noconfirm && pacman -S --noconfirm base-devel git sudo cmake ninja unzip curl python
 
       - name: Create build user (makepkg refuses root)
-        working-directory: /
         run: |
           useradd -m builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
@@ -45,10 +37,13 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Fix ownership for builder
-        run: chown -R builder:builder .
+      - name: Fix ownership and safe directory for builder
+        run: |
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Auto-bump pkgrel based on git history
+        working-directory: ${{ github.workspace }}
         run: |
           for pkg in nic-nvim nic-dotfiles; do
             commit_count=$(git log --oneline -- "${pkg}/" | wc -l)
@@ -56,26 +51,28 @@ jobs:
             sed -i "s/^pkgrel=.*/pkgrel=${pkgrel}/" "${pkg}/PKGBUILD"
             echo "${pkg}: pkgrel=${pkgrel}"
           done
-          chown -R builder:builder .
 
       - name: Fetch latest Neovim stable version
+        working-directory: ${{ github.workspace }}
         run: |
           latest=$(curl -s https://api.github.com/repos/neovim/neovim/releases/latest \
             | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'].lstrip('v'))")
           echo "NVIM_VER=${latest}" >> $GITHUB_ENV
           sed -i "s/^pkgver=.*/pkgver=${latest}/" nic-nvim/PKGBUILD
           echo "nic-nvim: pkgver=${latest}"
-          chown -R builder:builder nic-nvim/
 
       - name: Build nic-nvim
-        run: sudo -u builder bash -c "cd /github/workspace/nic-nvim && makepkg -s --noconfirm --noprogressbar"
+        working-directory: ${{ github.workspace }}
+        run: sudo -u builder bash -c "cd '$GITHUB_WORKSPACE/nic-nvim' && makepkg -s --noconfirm --noprogressbar"
         timeout-minutes: 30
 
       - name: Build nic-dotfiles
-        run: sudo -u builder bash -c "cd /github/workspace/nic-dotfiles && makepkg -s --noconfirm --noprogressbar"
+        working-directory: ${{ github.workspace }}
+        run: sudo -u builder bash -c "cd '$GITHUB_WORKSPACE/nic-dotfiles' && makepkg -s --noconfirm --noprogressbar"
         timeout-minutes: 5
 
       - name: Assemble repo database
+        working-directory: ${{ github.workspace }}
         run: |
           arch="x86_64"
           dest="repo/${REPO_CHANNEL}/${arch}"
@@ -93,11 +90,10 @@ jobs:
           ls -lh "${dest}/"
 
       - name: Commit & push repo artifacts
+        working-directory: ${{ github.workspace }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Use token-authenticated remote for push inside container
           git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
 
           git add repo/ nic-nvim/PKGBUILD nic-dotfiles/PKGBUILD
