@@ -6,8 +6,9 @@ pkgdesc="Neovim — latest stable, built from source"
 arch=('x86_64')
 url="https://github.com/neovim/neovim"
 license=('Apache-2.0' 'custom:Vim')
-depends=('libuv' 'libluv' 'luajit' 'libunibilium' 'libtermkey' 'libvterm' 'lua51-lpeg' 'lua51-mpack')
-makedepends=('cmake' 'ninja' 'git' 'unzip' 'tree-sitter')
+# Bundled build — only true runtime deps that ship in Arch repos
+depends=('gcc-libs' 'glibc')
+makedepends=('cmake' 'ninja' 'git' 'unzip' 'curl' 'gettext')
 provides=('neovim')
 conflicts=('neovim' 'neovim-git')
 source=("neovim-${pkgver}.tar.gz::https://github.com/neovim/neovim/archive/refs/tags/v${pkgver}.tar.gz")
@@ -15,16 +16,19 @@ sha256sums=('SKIP')
 
 build() {
   cd "neovim-${pkgver}"
+  # Use bundled deps so we don't need libluv/libvterm etc from repos
   cmake -S cmake.deps -B .deps \
     -G Ninja \
-    -D CMAKE_BUILD_TYPE=Release
+    -D CMAKE_BUILD_TYPE=Release \
+    -D USE_BUNDLED=ON
   cmake --build .deps
 
   cmake -B build \
     -G Ninja \
     -D CMAKE_BUILD_TYPE=Release \
     -D CMAKE_INSTALL_PREFIX=/usr \
-    -D ENABLE_TESTING=OFF
+    -D ENABLE_TESTING=OFF \
+    -D USE_BUNDLED=ON
   cmake --build build
 }
 
