@@ -1,9 +1,7 @@
 # arch-packages
 
-Nicolas custom Arch Linux package repository.
-
-Packages are built with `makepkg` and hosted here so they can be consumed like
-plain `pacman` packages on any Arch install.
+Nicolas custom Arch Linux package repository.  
+Packages are built automatically via GitHub Actions on an Arch Linux container and published here.
 
 ## Packages
 
@@ -12,42 +10,55 @@ plain `pacman` packages on any Arch install.
 | `nic-nvim` | Neovim latest stable, built from source |
 | `nic-dotfiles` | Bare git clone of [arch-dotfiles](https://github.com/microservice-tech-nicolas/arch-dotfiles) into `$HOME` |
 
-## Using this repo on a fresh Arch install
+## Channels
 
-Add the custom repo to `/etc/pacman.conf`:
+| Channel | Branch | Stability |
+|---|---|---|
+| `stable` | `main` | production — only tagged/reviewed builds |
+| `dev` | `dev` | cutting edge — all pushes |
 
+## Add to pacman
+
+Edit `/etc/pacman.conf` and add **one** of the following above `[core]`:
+
+**Stable (recommended):**
 ```ini
 [nic-repo]
 SigLevel = Optional TrustAll
-Server = https://raw.githubusercontent.com/microservice-tech-nicolas/arch-packages/main/repo/$arch
+Server = https://raw.githubusercontent.com/microservice-tech-nicolas/arch-packages/main/repo/stable/$arch
 ```
 
-Then sync and install:
+**Dev:**
+```ini
+[nic-repo]
+SigLevel = Optional TrustAll
+Server = https://raw.githubusercontent.com/microservice-tech-nicolas/arch-packages/dev/repo/dev/$arch
+```
 
+Then:
 ```sh
 sudo pacman -Sy
 sudo pacman -S nic-nvim nic-dotfiles
 ```
 
-## Building packages locally
+## Install script (fresh Arch box)
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/microservice-tech-nicolas/arch-packages/main/install.sh | bash
+```
+
+## Managing dotfiles after install
+
+```sh
+dot add .config/nvim/init.lua
+dot commit -m "nvim: initial config"
+dot push
+```
+
+## Local build
 
 ```sh
 git clone https://github.com/microservice-tech-nicolas/arch-packages.git
-cd arch-packages/nic-nvim
-makepkg -si
-
-cd ../nic-dotfiles
-makepkg -si
-```
-
-## Maintaining the repo
-
-After building a package, add it to the repo database:
-
-```sh
-# From repo root
-mkdir -p repo/x86_64
-cp nic-nvim/*.pkg.tar.zst repo/x86_64/
-repo-add repo/x86_64/nic-repo.db.tar.gz repo/x86_64/*.pkg.tar.zst
-git add repo/ && git commit -m "repo: update packages" && git push
+cd arch-packages/nic-nvim && makepkg -si
+cd ../nic-dotfiles && makepkg -si
 ```

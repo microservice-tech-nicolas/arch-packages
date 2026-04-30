@@ -1,0 +1,113 @@
+name: Build & Publish
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'nic-*/PKGBUILD'
+      - 'nic-*/**.install'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+
+    # Publish to repo/stable or repo/dev depending on branch
+    env:
+      REPO_CHANNEL: ${{ github.ref_name == 'main' && 'stable' || 'dev' }}
+
+    steps:
+      - name: Bootstrap Arch build environment
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm base-devel git sudo cmake ninja unzip curl python
+
+      - name: Create build user (makepkg refuses root)
+        run: |
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fix ownership for builder
+        run: chown -R builder:builder .
+
+      - name: Auto-bump pkgrel based on git history
+        run: |
+          for pkg in nic-nvim nic-dotfiles; do
+            pkgbuild="${pkg}/PKGBUILD"
+            # Count commits touching this package since last tag/release as pkgrel
+            commit_count=$(git log --oneline -- "${pkg}/" | wc -l)
+            pkgrel=$(( commit_count + 1 ))
+            sed -i "s/^pkgrel=.*/pkgrel=${pkgrel}/" "${pkgbuild}"
+            echo "${pkg}: pkgrel=${pkgrel}"
+          done
+          chown -R builder:builder .
+
+      - name: Fetch latest Neovim stable version
+        run: |
+          latest=$(curl -s https://api.github.com/repos/neovim/neovim/releases/latest | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'].lstrip('v'))")
+          echo "NVIM_VER=${latest}" >> $GITHUB_ENV
+          sed -i "s/^pkgver=.*/pkgver=${latest}/" nic-nvim/PKGBUILD
+          echo "nic-nvim: pkgver=${latest}"
+          chown -R builder:builder nic-nvim/
+
+      - name: Build nic-nvim
+        run: |
+          cd nic-nvim
+          sudo -u builder makepkg -s --noconfirm --noprogressbar 2>&1
+        timeout-minutes: 30
+
+      - name: Build nic-dotfiles
+        run: |
+          cd nic-dotfiles
+          sudo -u builder makepkg -s --noconfirm --noprogressbar 2>&1
+        timeout-minutes: 5
+
+      - name: Assemble repo database
+        run: |
+          arch="x86_64"
+          dest="repo/${REPO_CHANNEL}/${arch}"
+          mkdir -p "${dest}"
+
+          # Copy built packages
+          for pkg in nic-nvim nic-dotfiles; do
+            cp ${pkg}/*.pkg.tar.zst "${dest}/"
+          done
+
+          # Build the pacman database
+          repo-add "${dest}/nic-repo.db.tar.gz" "${dest}"/*.pkg.tar.zst
+
+          # Symlink to standard names pacman expects
+          ln -sf nic-repo.db.tar.gz "${dest}/nic-repo.db"
+          ln -sf nic-repo.files.tar.gz "${dest}/nic-repo.files" 2>/dev/null || true
+
+          echo "=== Repo contents ==="
+          ls -lh "${dest}/"
+
+      - name: Commit & push repo artifacts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add repo/
+          # Also commit the bumped PKGBUILDs
+          git add nic-nvim/PKGBUILD nic-dotfiles/PKGBUILD
+
+          if git diff --cached --quiet; then
+            echo "Nothing changed, skipping commit."
+          else
+            git commit -m "ci: publish ${REPO_CHANNEL} repo [skip ci]"
+            git push origin ${{ github.ref_name }}
+          fi
