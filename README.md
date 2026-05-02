@@ -68,6 +68,34 @@ sudo pacman -S arch-full
 
 ---
 
+## Arch ricing with virtme-ng (from any host)
+
+Bootstrap a full Arch rootfs and rice it from your current machine using `vng`. The scripts live in your dotfiles at `~/.config/vng/`.
+
+**One-time bootstrap** (creates `~/rootfs/arch-rice`, installs `arch-full` via nic-repo inside the VM):
+
+```sh
+~/.config/vng/bootstrap-arch-rice.sh
+```
+
+**Daily ricing loop** (snapshot mode — each boot is clean, dotfiles overlaid from host):
+
+```sh
+~/.config/vng/rice.sh          # boot into sway
+~/.config/vng/rice.sh shell    # drop into zsh (no GUI)
+~/.config/vng/rice.sh rw       # persistent writes (use for installs)
+~/.config/vng/rice.sh update   # upgrade all nic packages inside the VM
+```
+
+Verify you're in the VM:
+```sh
+vng -r -- bash -c 'systemd-detect-virt; cat /sys/class/dmi/id/sys_vendor'
+# kvm
+# Bochs   ← normal, this is QEMU's default SMBIOS vendor
+```
+
+---
+
 ## Dotfiles
 
 All configs live in [`arch-dotfiles`](https://github.com/microservice-tech-nicolas/arch-dotfiles) and are checked out into `$HOME` by `nic-dotfiles`. Included:
