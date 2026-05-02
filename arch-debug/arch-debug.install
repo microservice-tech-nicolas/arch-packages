@@ -1,0 +1,54 @@
+_real_user() { echo "${SUDO_USER:-$(logname 2>/dev/null || whoami)}"; }
+
+post_install() {
+  local user
+  user="$(_real_user)"
+
+  # ── bpftrace / bcc need kernel headers ──────────────────────────────────
+  local running_kernel
+  running_kernel=$(uname -r)
+  if ! pacman -Q "linux-headers" &>/dev/null && \
+     ! pacman -Q "linux-lts-headers" &>/dev/null && \
+     ! pacman -Q "linux-zen-headers" &>/dev/null; then
+    echo "==> arch-debug: WARNING — no kernel headers found."
+    echo "    bpftrace and bcc need headers matching your running kernel (${running_kernel})."
+    echo "    Install the right one, e.g.:"
+    echo "      sudo pacman -S linux-headers"
+  else
+    echo "==> arch-debug: kernel headers found — bpftrace/bcc ready."
+  fi
+
+  # ── wireshark — add user to wireshark group for cap_net_raw ─────────────
+  if getent group wireshark &>/dev/null; then
+    echo "==> arch-debug: adding ${user} to wireshark group..."
+    usermod -aG wireshark "${user}"
+    echo "    Log out and back in for group to take effect."
+  fi
+
+  # ── distrobox — no root needed, just confirm podman or docker is present ─
+  if ! command -v docker &>/dev/null && ! command -v podman &>/dev/null; then
+    echo "==> arch-debug: WARNING — distrobox needs docker or podman."
+    echo "    Install one: sudo pacman -S docker  OR  sudo pacman -S podman"
+  else
+    echo "==> arch-debug: distrobox ready."
+  fi
+
+  echo ""
+  echo "==> arch-debug: done. Quick reference:"
+  echo ""
+  echo "  bpftrace -e 'tracepoint:syscalls:sys_enter_* { @[probe] = count(); }'  — count syscalls"
+  echo "  opensnoop-bpfcc                                                         — trace file opens"
+  echo "  execsnoop-bpfcc                                                         — trace exec calls"
+  echo "  perf stat -- <cmd>                                                      — CPU perf counters"
+  echo "  perf record -g -- <cmd> && perf report                                  — flame-ready profile"
+  echo "  cargo flamegraph -- <args>                                              — flame graph"
+  echo "  hyperfine '<cmd>'                                                       — benchmark"
+  echo "  strace -e trace=network <cmd>                                           — network syscalls"
+  echo "  sysdig -cl                                                              — list chisels"
+  echo "  distrobox create --name ubuntu --image ubuntu:24.04                    — Ubuntu in a box"
+  echo "  virtme-ng --run /boot/vmlinuz-linux --root /                           — test a kernel"
+}
+
+post_upgrade() {
+  post_install
+}

@@ -60,6 +60,12 @@ sudo pacman -S arch-full
 | `arch-ops` | kubectl, helm, k9s, minikube, docker, docker-compose, docker-buildx | Enables docker.service, adds user to docker group |
 | `arch-ai` | nodejs, npm, curl | Installs claude-code (native installer), opencode, crush |
 
+### Debug & Observability
+
+| Package | Installs | Post-install |
+|---|---|---|
+| `arch-debug` | bpftrace, bcc, perf, sysdig, strace, ltrace, lsof, gdb, valgrind, heaptrack, hyperfine, cargo-flamegraph, tcpdump, wireshark-cli, nmap, bandwhich, distrobox, virtme-ng | Checks kernel headers, adds user to wireshark group, checks distrobox runtime |
+
 ---
 
 ## Dotfiles

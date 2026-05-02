@@ -1,0 +1,52 @@
+# Maintainer: Nicolas <nicolas.verhaert@microservice.tech>
+pkgname=arch-debug
+pkgver=1
+pkgrel=1
+pkgdesc="Deep power user debug & observability stack: bpftrace, bcc, perf, sysdig, distrobox, virtme-ng and more"
+arch=('x86_64')
+url="https://github.com/microservice-tech-nicolas/arch-packages"
+license=('MIT')
+depends=(
+  # ── eBPF / kernel tracing ─────────────────────────────────────────────
+  'bpftrace'          # high-level eBPF tracing language
+  'bcc'               # BPF compiler collection + tools (opensnoop, execsnoop, etc.)
+  'perf'              # Linux perf_events profiler
+  'sysdig'            # system call tracer & container inspector
+
+  # ── process / syscall tracing ─────────────────────────────────────────
+  'strace'            # syscall tracer
+  'ltrace'            # library call tracer
+  'lsof'              # list open files / sockets
+
+  # ── debugging ─────────────────────────────────────────────────────────
+  'gdb'               # GNU debugger
+  'valgrind'          # memory error detector & profiler
+  'heaptrack'         # heap memory profiler
+
+  # ── benchmarking & flame graphs ───────────────────────────────────────
+  'hyperfine'         # CLI benchmarking tool
+  'cargo-flamegraph'  # flame graph generator (works for any language via perf)
+
+  # ── network inspection ────────────────────────────────────────────────
+  'tcpdump'           # packet capture
+  'wireshark-cli'     # tshark — CLI packet analyser
+  'nmap'              # port scanner & network explorer
+  'bandwhich'         # per-process bandwidth monitor
+
+  # ── container & VM sandboxing ─────────────────────────────────────────
+  'distrobox'         # run any Linux distro in a container, integrated with host
+  'virtme-ng'         # fast kernel development — boot a kernel in a VM in seconds
+)
+optdepends=(
+  'docker: container runtime for distrobox'
+  'podman: rootless container runtime for distrobox'
+  'linux-headers: required by bcc/bpftrace for kernel module builds'
+  'wireshark-qt: GUI packet analyser'
+)
+install=${pkgname}.install
+source=()
+sha256sums=()
+
+package() {
+  true
+}
