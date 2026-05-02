@@ -64,7 +64,7 @@ sudo pacman -S arch-full
 
 | Package | Installs | Post-install |
 |---|---|---|
-| `arch-debug` | bpftrace, bcc, perf, sysdig, strace, ltrace, lsof, gdb, valgrind, heaptrack, hyperfine, cargo-flamegraph, tcpdump, wireshark-cli, nmap, bandwhich, distrobox, virtme-ng | Checks kernel headers, adds user to wireshark group, checks distrobox runtime |
+| `arch-debug` | bpftrace, bcc, perf, sysdig, strace, ltrace, lsof, gdb, valgrind, heaptrack, hyperfine, cargo-flamegraph, tcpdump, wireshark-cli, nmap, bandwhich, distrobox, virtme-ng, btop, netdata, lazydocker | Checks kernel headers, adds user to wireshark group, enables netdata service, installs tmuxinator via gem |
 
 ---
 

@@ -36,12 +36,18 @@ depends=(
   # ── container & VM sandboxing ─────────────────────────────────────────
   'distrobox'         # run any Linux distro in a container, integrated with host
   'virtme-ng'         # fast kernel development — boot a kernel in a VM in seconds
+
+  # ── monitoring & TUIs ────────────────────────────────────────────────
+  'btop'              # resource monitor (CPU, mem, net, disk) with mouse support
+  'netdata'           # real-time performance monitoring with web dashboard
+  'lazydocker'        # docker TUI — containers, images, volumes, logs
 )
 optdepends=(
-  'docker: container runtime for distrobox'
+  'docker: container runtime for distrobox and lazydocker'
   'podman: rootless container runtime for distrobox'
   'linux-headers: required by bcc/bpftrace for kernel module builds'
   'wireshark-qt: GUI packet analyser'
+  'ruby: required for tmuxinator (installed via gem in post_install)'
 )
 install=${pkgname}.install
 source=()

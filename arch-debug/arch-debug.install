@@ -25,7 +25,7 @@ post_install() {
     echo "    Log out and back in for group to take effect."
   fi
 
-  # ── distrobox — no root needed, just confirm podman or docker is present ─
+  # ── distrobox — confirm podman or docker is present ─────────────────────
   if ! command -v docker &>/dev/null && ! command -v podman &>/dev/null; then
     echo "==> arch-debug: WARNING — distrobox needs docker or podman."
     echo "    Install one: sudo pacman -S docker  OR  sudo pacman -S podman"
@@ -33,9 +33,30 @@ post_install() {
     echo "==> arch-debug: distrobox ready."
   fi
 
+  # ── netdata — enable service ──────────────────────────────────────────────
+  if command -v netdata &>/dev/null; then
+    echo "==> arch-debug: enabling netdata service..."
+    systemctl enable --now netdata.service 2>/dev/null || true
+    echo "    Dashboard: http://localhost:19999"
+  fi
+
+  # ── tmuxinator — install via gem (not in official repos) ─────────────────
+  if command -v gem &>/dev/null; then
+    echo "==> arch-debug: installing tmuxinator via gem..."
+    gem install tmuxinator --no-document && echo "  [ok] tmuxinator" \
+      || echo "  [warn] gem install tmuxinator failed — run 'gem install tmuxinator' manually"
+  else
+    echo "==> arch-debug: ruby not found — skipping tmuxinator."
+    echo "    Install ruby first: sudo pacman -S ruby && gem install tmuxinator"
+  fi
+
   echo ""
   echo "==> arch-debug: done. Quick reference:"
   echo ""
+  echo "  btop                                                                     — resource monitor"
+  echo "  lazydocker                                                               — docker TUI"
+  echo "  tmuxinator start <project>                                              — tmux session manager"
+  echo "  netdata dashboard: http://localhost:19999                               — real-time metrics"
   echo "  bpftrace -e 'tracepoint:syscalls:sys_enter_* { @[probe] = count(); }'  — count syscalls"
   echo "  opensnoop-bpfcc                                                         — trace file opens"
   echo "  execsnoop-bpfcc                                                         — trace exec calls"
